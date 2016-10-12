@@ -15,6 +15,7 @@ import           Control.Monad(unless)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 import           Data.Char(digitToInt)
+import           Data.List(isPrefixOf)
 import           Data.Map.Strict(Map)
 import qualified Data.Map.Strict as Map
 import           Data.Serialize.Get
@@ -281,7 +282,8 @@ getArchiveHeader =
      hdrDeviceMinor      <- toNumeric       `fmap` getByteString 8
      hdrPrefix           <- toStringLike    `fmap` getByteString 155
      skip 12 -- trailing bytes
-     unless (hdrMagic == "ustar ") $ fail ("Bad magic value: " ++ hdrMagic ++ "(filename: " ++ show hdrFileName)
+     unless ("ustar" `isPrefixOf` hdrMagic) $
+       fail ("Bad magic value: " ++ hdrMagic ++ " (fname: " ++ show hdrFileName)
      return ArchiveHeader{..}
 
 data RecordTypeFlag = FlagRegularFile
@@ -328,6 +330,7 @@ toNumeric = parseOctal 0
   parseOctal acc x =
     case BC.uncons x of
       Nothing        -> acc
+      Just (' ',  _) -> acc
       Just ('\0', _) -> acc
       Just (c, rest) -> parseOctal ((acc * 8) + digitToInt' c) rest
   digitToInt' = fromIntegral . digitToInt
